@@ -34,36 +34,42 @@ import com.cburch.logisim.fpga.designrulecheck.CorrectLabel;
 import com.cburch.logisim.instance.InstancePainter;
 import com.cburch.logisim.instance.InstanceState;
 
-public class Ttl74151 extends AbstractTtlGate {
+public class Ttl74253 extends AbstractTtlGate {
 
-  public static final int PORT_INDEX_D3 = 0;
-  public static final int PORT_INDEX_D2 = 1;
-  public static final int PORT_INDEX_D1 = 2;
-  public static final int PORT_INDEX_D0 = 3;
-  public static final int PORT_INDEX_Y = 4;
-  public static final int PORT_INDEX_W = 5;
-  public static final int PORT_INDEX_nG = 6;
-  public static final int PORT_INDEX_C = 7;
-  public static final int PORT_INDEX_B = 8;
-  public static final int PORT_INDEX_A = 9;
-  public static final int PORT_INDEX_D7 = 10;
-  public static final int PORT_INDEX_D6 = 11;
-  public static final int PORT_INDEX_D5 = 12;
-  public static final int PORT_INDEX_D4 = 13;
+  public static final int PORT_INDEX_1nG = 0;
+  public static final int PORT_INDEX_B = 1;
+  public static final int PORT_INDEX_1C3 = 2;
+  public static final int PORT_INDEX_1C2 = 3;
+  public static final int PORT_INDEX_1C1 = 4;
+  public static final int PORT_INDEX_1C0 = 5;
+  public static final int PORT_INDEX_1Y = 6;
+  public static final int PORT_INDEX_2Y = 7;
+  public static final int PORT_INDEX_2C0 = 8;
+  public static final int PORT_INDEX_2C1 = 9;
+  public static final int PORT_INDEX_2C2 = 10;
+  public static final int PORT_INDEX_2C3 = 11;
+  public static final int PORT_INDEX_A = 12;
+  public static final int PORT_INDEX_2nG = 13;
 
-  public static final int[] PORT_INDICES_D = {
-      PORT_INDEX_D0, PORT_INDEX_D1, PORT_INDEX_D2, PORT_INDEX_D3,
-      PORT_INDEX_D4, PORT_INDEX_D5, PORT_INDEX_D6, PORT_INDEX_D7
+  public static final byte[] INPUTS_nG = { PORT_INDEX_1nG, PORT_INDEX_2nG };
+
+  public static final byte[] OUTPUTS_Y = { PORT_INDEX_1Y, PORT_INDEX_2Y };
+
+  public static final byte[][] INPUTS_C = {
+      { PORT_INDEX_1C0, PORT_INDEX_1C1, PORT_INDEX_1C2, PORT_INDEX_1C3 },
+      { PORT_INDEX_2C0, PORT_INDEX_2C1, PORT_INDEX_2C2, PORT_INDEX_2C3 }
   };
 
-  public Ttl74151() {
+  public Ttl74253() {
     super(
-        "74151",
+        "74253",
         (byte) 16,
-        new byte[] { PORT_INDEX_Y + 1, PORT_INDEX_W + 1 },
+        new byte[] {
+            PORT_INDEX_1Y + 1, PORT_INDEX_2Y + 2
+        },
         new String[] {
-            "D3", "D2", "D1", "D0", "Y", "W", "nG",
-            "C", "B", "A", "D7", "D6", "D5", "D4"
+            "1nG", "B", "1C3", "1C2", "1C1", "1C0", "1Y",
+            "2Y", "2C0", "2C1", "2C2", "2C3", "A", "2nG"
         });
   }
 
@@ -76,32 +82,34 @@ public class Ttl74151 extends AbstractTtlGate {
   @Override
   public void ttlpropagate(InstanceState state) {
     Value a = state.getPortValue(PORT_INDEX_A),
-      b = state.getPortValue(PORT_INDEX_B),
-      c = state.getPortValue(PORT_INDEX_C),
-      nG = state.getPortValue(PORT_INDEX_nG),
-      y, w;
+        b = state.getPortValue(PORT_INDEX_B),
+        override = null;
 
-    for (Value v : new Value[] { a, b, c, nG }) {
-      if (!v.isFullyDefined()) {
-        state.setPort(PORT_INDEX_Y, Value.ERROR, 1);
-        state.setPort(PORT_INDEX_W, Value.ERROR, 1);
-        return;
-      }
-    }
+    byte select = 0;
 
-    if (nG == Value.TRUE) {
-      y = Value.FALSE;
-      w = Value.TRUE;
+    if (!a.isFullyDefined() || !b.isFullyDefined()) {
+      override = Value.ERROR;
     } else {
-      y = state.getPortValue(
-        PORT_INDICES_D[(int) (
-          (c.toLongValue() << 2) | (b.toLongValue() << 1) | (a.toLongValue())
-        )]);
-      w = y.not();
+       select = (byte) ((b.toLongValue() << 1) | a.toLongValue());
     }
 
-    state.setPort(PORT_INDEX_Y, y, 1);
-    state.setPort(PORT_INDEX_Y, w, 1);
+    for (int i = 0; i < 2; i++) {
+      Value y = override;
+
+      if (y == null) {
+        Value nG = state.getPortValue(INPUTS_nG[i]);
+
+        if (!nG.isFullyDefined()) {
+          y = Value.ERROR;
+        } else if (nG == Value.TRUE) {
+          y = Value.NIL;
+        } else {
+          y = state.getPortValue(INPUTS_C[i][select]);
+        }
+      }
+
+      state.setPort(OUTPUTS_Y[i], y, 1);
+    }
   }
 
   @Override

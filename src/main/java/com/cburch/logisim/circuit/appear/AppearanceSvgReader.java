@@ -44,6 +44,8 @@ import com.cburch.logisim.std.io.TtyShape;
 import com.cburch.logisim.std.memory.CounterShape;
 import com.cburch.logisim.std.memory.RegisterShape;
 import java.util.Map;
+
+import com.cburch.logisim.std.ttl.TTLRegisterShape;
 import org.w3c.dom.Element;
 
 public class AppearanceSvgReader {
@@ -106,6 +108,8 @@ public class AppearanceSvgReader {
         return new SevenSegmentShape(x, y, path);
       case "visible-register":
         return new RegisterShape(x, y, path);
+      case "visible-ttl-register":
+        return new TTLRegisterShape(x, y, path);
       case "visible-counter":
         return new CounterShape(x, y, path);
       case "visible-vga":

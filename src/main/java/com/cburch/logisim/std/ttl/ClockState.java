@@ -48,10 +48,71 @@ class ClockState implements Cloneable {
     }
   }
 
+  private Value updateIndex(Value newClock, int which) {
+    if (which == 0 && this.lastClock.getWidth() == 1) {
+      Value oldClock = this.lastClock;
+      this.lastClock = newClock;
+      return oldClock;
+    }
+
+    Value[] values = lastClock.getAll();
+    if (values.length <= which) {
+      Value[] nvalue = (Value.createKnown(BitWidth.create(which + 1), 0)).getAll();
+      System.arraycopy(values, 0, nvalue, 0, values.length);
+      values = nvalue;
+    }
+
+    Value oldClock = values[which];
+
+    if (newClock != oldClock) {
+      values[which] = newClock;
+      lastClock = Value.create(values);
+    }
+
+    return oldClock;
+  }
+
+  private Value getIndex(int which) {
+    if (which == 0 && this.lastClock.getWidth() == 1) {
+      return this.lastClock;
+    }
+
+    return which < this.lastClock.getWidth() ? this.lastClock.getAll()[which] : Value.FALSE;
+  }
+
+  public boolean checkClock(Value newClock) {
+    return this.checkClock(newClock, StdAttr.EDGE_TRIGGER);
+  }
+
+  public boolean checkClock(Value newClock, Object trigger) {
+    return this.checkClock(newClock, 0, trigger);
+  }
+
+  public boolean checkClock(Value newClock, int which, Object trigger) {
+    return this.checkTrigger(newClock, this.updateIndex(this.getIndex(which), which), trigger);
+  }
+
+  public boolean updateClock(Value newClock) {
+    return this.updateClock(newClock, StdAttr.EDGE_TRIGGER);
+  }
+
   public boolean updateClock(Value newClock, Object trigger) {
-    Value oldClock = lastClock;
-    lastClock = newClock;
-    if (trigger == null || trigger == StdAttr.TRIG_RISING) {
+    return this.updateClock(newClock, 0, trigger);
+  }
+
+  public boolean updateClock(Value newClock, int which) {
+    return this.updateClock(newClock, which, StdAttr.EDGE_TRIGGER);
+  }
+
+  public boolean updateClock(Value newClock, int which, Object trigger) {
+    return this.checkTrigger(newClock, this.updateIndex(newClock, which), trigger);
+  }
+
+  private boolean checkTrigger(Value newClock, Value oldClock, Object trigger) {
+    if (trigger == StdAttr.EDGE_TRIGGER) {
+      return checkTrigger(newClock, oldClock, StdAttr.TRIG_RISING) ||
+          checkTrigger(newClock, oldClock, StdAttr.TRIG_FALLING);
+    } else if (trigger == null || trigger == StdAttr.TRIG_RISING) {
       return oldClock == Value.FALSE && newClock == Value.TRUE;
     } else if (trigger == StdAttr.TRIG_FALLING) {
       return oldClock == Value.TRUE && newClock == Value.FALSE;
@@ -62,24 +123,5 @@ class ClockState implements Cloneable {
     } else {
       return oldClock == Value.FALSE && newClock == Value.TRUE;
     }
-  }
-
-  public boolean updateClock(Value newClock) {
-    Value oldClock = lastClock;
-    lastClock = newClock;
-    return oldClock == Value.FALSE && newClock == Value.TRUE;
-  }
-
-  public boolean updateClock(Value newClock, int which) {
-    Value[] values = lastClock.getAll();
-    if (values.length <= which) {
-      Value[] nvalue = (Value.createKnown(BitWidth.create(which + 1), 0)).getAll();
-      System.arraycopy(values, 0, nvalue, 0, values.length);
-      values = nvalue;
-    }
-    Value oldClock = values[which];
-    values[which] = newClock;
-    lastClock = Value.create(values);
-    return oldClock == Value.FALSE && newClock == Value.TRUE;
   }
 }

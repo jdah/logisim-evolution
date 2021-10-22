@@ -69,7 +69,7 @@ public class Ttl74682 extends AbstractTtlGate {
     super(
         "74682",
         (byte) 20,
-        new byte[] {19},
+        new byte[] { 1, 19 },
         new String[] {
             "nP>Q", "P0", "Q0", "P1", "Q1", "P2", "Q2", "P3", "Q3",
             "P4", "Q4", "P5", "Q5", "P6", "Q6", "P7", "Q7", "nP=Q"
@@ -116,7 +116,6 @@ public class Ttl74682 extends AbstractTtlGate {
 
   @Override
   public boolean HDLSupportedComponent(AttributeSet attrs) {
-    if (MyHDLGenerator == null) MyHDLGenerator = new Ttl7485HDLGenerator();
-    return MyHDLGenerator.HDLTargetSupported(attrs);
+      return false;
   }
 }

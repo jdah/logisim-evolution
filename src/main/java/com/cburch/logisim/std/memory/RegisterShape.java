@@ -38,6 +38,7 @@ import com.cburch.logisim.circuit.appear.DynamicElement;
 import com.cburch.logisim.data.Attribute;
 import com.cburch.logisim.data.BitWidth;
 import com.cburch.logisim.data.Bounds;
+import com.cburch.logisim.data.Value;
 import com.cburch.logisim.instance.StdAttr;
 import com.cburch.logisim.std.base.Text;
 import com.cburch.logisim.util.GraphicsUtil;
@@ -62,6 +63,15 @@ public class RegisterShape extends DynamicElement {
     label.setHorizontalAlignment(EditableLabel.CENTER);
     label.setVerticalAlignment(EditableLabel.MIDDLE);
     calculateBounds();
+  }
+
+  protected BitWidth getWidth(CircuitState state) {
+    return path.leaf().getAttributeSet().getValue(StdAttr.WIDTH);
+  }
+
+  protected Value getValue(CircuitState state) {
+    RegisterData data = (RegisterData) getData(state);
+    return data == null ? Value.NIL : data.value;
   }
 
   void calculateBounds() {
@@ -119,10 +129,9 @@ public class RegisterShape extends DynamicElement {
     g.setColor(Color.BLACK);
     g.drawRect(x, y, w, h);
     if (state != null) {
-      BitWidth widthVal = path.leaf().getAttributeSet().getValue(StdAttr.WIDTH);
+      BitWidth widthVal = this.getWidth(state);
       int width = (widthVal == null ? 8 : widthVal.getWidth());
-      RegisterData data = (RegisterData) getData(state);
-      long val = data == null ? 0 : data.value.toLongValue();
+      long val = this.getValue(state).toLongValue();
       label.setText(StringUtil.toHexString(width, val));
     }
     label.paint(g);

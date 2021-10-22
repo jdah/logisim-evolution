@@ -28,6 +28,8 @@
 
 package com.cburch.logisim.std.ttl;
 
+import com.cburch.logisim.circuit.appear.DynamicElement;
+import com.cburch.logisim.circuit.appear.DynamicElementProvider;
 import com.cburch.logisim.data.BitWidth;
 import com.cburch.logisim.data.Value;
 import com.cburch.logisim.fpga.designrulecheck.NetlistComponent;
@@ -43,7 +45,7 @@ import java.awt.event.MouseEvent;
 import static com.cburch.logisim.data.Value.FALSE_COLOR;
 import static com.cburch.logisim.data.Value.TRUE_COLOR;
 
-public class Ttl74161 extends AbstractTtlGate {
+public class Ttl74161 extends AbstractTtlGate implements DynamicElementProvider {
 
     public static final int PORT_INDEX_nCLR = 0;
     public static final int PORT_INDEX_CLK = 1;
@@ -60,9 +62,15 @@ public class Ttl74161 extends AbstractTtlGate {
     public static final int PORT_INDEX_QA = 12;
     public static final int PORT_INDEX_RC0 = 13;
 
+    private final boolean synchronous;
+
     public Ttl74161() {
+        this("74161", false);
+    }
+
+    protected Ttl74161(String name, boolean synchronous) {
         super(
-                "74161",
+                name,
                 (byte) 16,
                 new byte[]{11, 12, 13, 14, 15},
                 new String[]{
@@ -82,6 +90,7 @@ public class Ttl74161 extends AbstractTtlGate {
                         "RC0"
                 });
         super.setInstancePoker(Poker.class);
+        this.synchronous = synchronous;
     }
 
     public static class Poker extends InstancePoker {
@@ -192,21 +201,27 @@ public class Ttl74161 extends AbstractTtlGate {
         }
 
         boolean triggered = data.updateClock(state.getPortValue(PORT_INDEX_CLK), StdAttr.TRIG_RISING);
-        if (triggered) {
+        long counter = data.getValue().toLongValue();
+        boolean cleared = false;
 
+        if (!this.synchronous || triggered) {
             Value nClear = state.getPortValue(PORT_INDEX_nCLR);
-            Value nLoad = state.getPortValue(PORT_INDEX_nLOAD);
-
-            long counter;
 
             if (nClear.toLongValue() == 0) {
                 counter = 0;
-            } else if (nLoad.toLongValue() == 0) {
+                cleared = true;
+            }
+        }
+
+        if (triggered) {
+            Value nLoad = state.getPortValue(PORT_INDEX_nLOAD);
+
+            if (nLoad.toLongValue() == 0) {
                 counter = state.getPortValue(PORT_INDEX_A).toLongValue();
                 counter += state.getPortValue(PORT_INDEX_B).toLongValue() << 1;
                 counter += state.getPortValue(PORT_INDEX_C).toLongValue() << 2;
                 counter += state.getPortValue(PORT_INDEX_D).toLongValue() << 3;
-            } else {
+            } else if (!this.synchronous || !cleared) {
                 counter = data.getValue().toLongValue();
                 Value enpAndEnt = state.getPortValue(PORT_INDEX_EnP).and(state.getPortValue(PORT_INDEX_EnT));
                 if (enpAndEnt.toLongValue() == 1) {
@@ -216,9 +231,9 @@ public class Ttl74161 extends AbstractTtlGate {
                     }
                 }
             }
-            data.setValue(Value.createKnown(BitWidth.create(4), counter));
-
         }
+
+        data.setValue(Value.createKnown(BitWidth.create(4), counter));
 
         Value vA = data.getValue().get(0);
         Value vB = data.getValue().get(1);
@@ -247,5 +262,10 @@ public class Ttl74161 extends AbstractTtlGate {
     @Override
     public int[] ClockPinIndex(NetlistComponent comp) {
         return new int[]{1};
+    }
+
+    @Override
+    public DynamicElement createDynamicElement(int x, int y, DynamicElement.Path path) {
+        return new TTLRegisterShape(x, y, path);
     }
 }

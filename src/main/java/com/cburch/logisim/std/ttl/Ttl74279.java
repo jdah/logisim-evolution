@@ -55,7 +55,10 @@ public class Ttl74279 extends AbstractTtlGate {
     super(
         "74279",
         (byte) 16,
-        new byte[] { PORT_INDEX_1Q, PORT_INDEX_2Q, PORT_INDEX_3Q, PORT_INDEX_4Q },
+        new byte[] {
+            PORT_INDEX_1Q + 1, PORT_INDEX_2Q + 1,
+            PORT_INDEX_3Q + 2, PORT_INDEX_4Q + 2
+        },
         new String[] {
             "n1R", "n1S1", "n1S2", "1Q", "n2R", "n2S", "2Q",
             "3Q", "n3R", "n3S1", "n3S2", "4Q" ,"n4R", "n4S"
@@ -102,7 +105,6 @@ public class Ttl74279 extends AbstractTtlGate {
 
   @Override
   public boolean HDLSupportedComponent(AttributeSet attrs) {
-    if (MyHDLGenerator == null) MyHDLGenerator = new Ttl7485HDLGenerator();
-    return MyHDLGenerator.HDLTargetSupported(attrs);
+      return false;
   }
 }
