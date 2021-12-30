@@ -87,9 +87,9 @@ public class Ttl74193 extends AbstractTtlGate implements DynamicElementProvider 
 
   @Override
   public void ttlpropagate(InstanceState state) {
-    TTLRegisterData data = (TTLRegisterData) state.getData();
+    Ttl74193Data data = (Ttl74193Data) state.getData();
     if (data == null) {
-      data = new TTLRegisterData(BitWidth.create(4));
+      data = new Ttl74193Data(BitWidth.create(4));
       state.setData(data);
 
       state.setPort(PORT_INDEX_nCO, Value.TRUE, 1);
@@ -104,62 +104,67 @@ public class Ttl74193 extends AbstractTtlGate implements DynamicElementProvider 
 
     long value = data.getValue().toLongValue();
 
-    if (!up.isFullyDefined() || !down.isFullyDefined() ||
-        !nLoad.isFullyDefined() || !clr.isFullyDefined()) {
-      override = Value.ERROR;
-    } else {
-      if (data.updateClock(clr, 0, StdAttr.TRIG_RISING)) {
-        value = 0;
-      }
+    if (clr.isFullyDefined() &&
+        data.updateClock(clr, 0, StdAttr.TRIG_RISING)) {
+      value = 0;
+    }
 
-      if (nLoad == Value.FALSE) {
-        value = 0;
+    if (nLoad.isFullyDefined() &&
+        data.updateClock(nLoad, 3, StdAttr.TRIG_FALLING)) {
+      value = 0;
 
-        for (int i = 0; i < 4; i++) {
-          Value x = state.getPortValue(PORT_INDICES_IN[i]);
+      for (int i = 0; i < 4; i++) {
+        Value x = state.getPortValue(PORT_INDICES_IN[i]);
 
-          if (!x.isFullyDefined()) {
-            override = Value.ERROR;
-            break;
-          }
-
-          value |= x.toLongValue() << i;
+        if (!x.isFullyDefined()) {
+          override = Value.ERROR;
+          break;
         }
-      }
 
-      // increment and check for carry
+        value |= x.toLongValue() << i;
+      }
+    }
+
+    // increment and check for carry
+    if (up.isFullyDefined()) {
       if (data.checkClock(up, 1, StdAttr.TRIG_RISING)) {
-        if (state.getPortValue(PORT_INDEX_nCO) == Value.FALSE) {
+        if (data.co) {
           state.setPort(PORT_INDEX_nCO, Value.TRUE, 1);
+          data.co = false;
         }
 
         value = (value + 1) % 16;
       } else if (data.checkClock(up, 1, StdAttr.TRIG_FALLING) && value == 15) {
-          state.setPort(PORT_INDEX_nCO, Value.FALSE, 1);
+        state.setPort(PORT_INDEX_nCO, Value.FALSE, 1);
+        data.co = true;
       }
 
       data.updateClock(up, 1);
+    }
 
-      // decrement and check for borrow
+    // decrement and check for borrow
+    if (down.isFullyDefined()) {
       if (data.checkClock(down, 2, StdAttr.TRIG_RISING)) {
-        if (state.getPortValue(PORT_INDEX_nBO) == Value.FALSE) {
+        if (data.bo) {
           state.setPort(PORT_INDEX_nBO, Value.TRUE, 1);
+          data.bo = false;
         }
 
         value = (value - 1) % 16;
       } else if (data.checkClock(down, 2, StdAttr.TRIG_FALLING) && value == 0) {
         state.setPort(PORT_INDEX_nBO, Value.FALSE, 1);
+        data.bo = true;
       }
 
       data.updateClock(down, 2);
+    }
 
-      for (int i = 0; i < 4; i++) {
-        state.setPort(
-            PORT_INDICES_Q[i],
-            override == null ? Value.createKnown(1, (value >> i) & 0x01) : override,
-            1
-        );
-      }
+    for (int i = 0; i < 4; i++) {
+      state.setPort(
+          PORT_INDICES_Q[i],
+          override == null ? Value.createKnown(1, (value >> i) & 0x01) : override,
+          1
+      );
     }
 
     if (override == null) {
@@ -172,5 +177,18 @@ public class Ttl74193 extends AbstractTtlGate implements DynamicElementProvider 
   @Override
   public DynamicElement createDynamicElement(int x, int y, DynamicElement.Path path) {
     return new TTLRegisterShape(x, y, path);
+  }
+
+  private class Ttl74193Data extends TTLRegisterData {
+    public boolean co, bo;
+    public boolean checkCO, checkBO;
+
+    public Ttl74193Data(BitWidth width) {
+      super(width);
+      this.co = false;
+      this.bo = false;
+      this.checkCO = false;
+      this.checkBO = false;
+    }
   }
 }

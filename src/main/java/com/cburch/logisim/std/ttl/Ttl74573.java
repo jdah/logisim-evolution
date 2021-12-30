@@ -34,11 +34,13 @@ import com.cburch.logisim.data.AttributeSet;
 import com.cburch.logisim.data.BitWidth;
 import com.cburch.logisim.data.Value;
 import com.cburch.logisim.fpga.designrulecheck.CorrectLabel;
-import com.cburch.logisim.instance.InstanceFactory;
 import com.cburch.logisim.instance.InstancePainter;
 import com.cburch.logisim.instance.InstanceState;
 import com.cburch.logisim.instance.StdAttr;
-import com.cburch.logisim.std.memory.RegisterShape;
+import com.cburch.logisim.util.GraphicsUtil;
+import com.cburch.logisim.util.StringUtil;
+
+import java.awt.*;
 
 public class Ttl74573 extends AbstractTtlGate implements DynamicElementProvider {
 
@@ -88,6 +90,38 @@ public class Ttl74573 extends AbstractTtlGate implements DynamicElementProvider 
   @Override
   public void paintInternal(InstancePainter painter, int x, int y, int height, boolean up) {
     super.paintBase(painter, true, false);
+
+    int xpos = x, ypos = y;
+    Graphics2D g = (Graphics2D) painter.getGraphics();
+
+    TTLRegisterData state = (TTLRegisterData) painter.getData();
+    if (painter.getShowState() && state != null) {
+      int len = (8 + 3) / 4;
+      int xcenter = 150 - 25;
+      Value val = state.getValue();
+      if (val.isFullyDefined()) g.setColor(Color.LIGHT_GRAY);
+      else if (val.isErrorValue()) g.setColor(Color.RED);
+      else g.setColor(Color.BLUE);
+      g.fillRect(xpos + xcenter - len * 4, ypos + 22, len * 8, 16);
+      String text = "";
+      if (val.isFullyDefined()) {
+        g.setColor(Color.DARK_GRAY);
+        text = StringUtil.toHexString(8, val.toLongValue()).toUpperCase();
+      } else {
+        g.setColor(Color.YELLOW);
+        for (int i = 0; i < StringUtil.toHexString(8, val.toLongValue()).length(); i++)
+          text = val.isUnknown() ? text.concat("?") : text.concat("!");
+      }
+      GraphicsUtil.drawText(
+          g,
+          text,
+          xpos + xcenter - len * 4 + 1,
+          ypos + 30,
+          GraphicsUtil.H_LEFT,
+          GraphicsUtil.V_CENTER);
+      g.setColor(Color.BLACK);
+    }
+
     Drawgates.paintPortNames(painter, x, y, height, super.portnames);
   }
 
@@ -102,23 +136,18 @@ public class Ttl74573 extends AbstractTtlGate implements DynamicElementProvider 
     Value[] vs = data.getValue().getAll();
     Value le = state.getPortValue(PORT_INDEX_LE), override = null;
 
-    if (!le.isFullyDefined()) {
-      override = Value.ERROR;
-    } else if (data.updateClock(le, StdAttr.TRIG_FALLING) || le == Value.TRUE) {
+    if (le.isFullyDefined() &&
+        (data.updateClock(le, StdAttr.TRIG_FALLING) || le == Value.TRUE)) {
       // Q = D
       for (int i = 0; i < 8; i++) {
         vs[i] = state.getPortValue(INPUTS_D[i]);
       }
     }
 
-    if (override == null) {
-      Value nOE = state.getPortValue(PORT_INDEX_nOE);
+    Value nOE = state.getPortValue(PORT_INDEX_nOE);
 
-      if (!nOE.isFullyDefined()) {
-        override = Value.ERROR;
-      } else if (nOE == Value.TRUE) {
-        override = Value.NIL;
-      }
+    if (!nOE.isFullyDefined() || nOE == Value.TRUE) {
+      override = Value.NIL;
     }
 
     for (int i = 0; i < 8; i++) {

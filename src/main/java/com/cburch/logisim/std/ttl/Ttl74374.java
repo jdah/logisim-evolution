@@ -98,29 +98,19 @@ public class Ttl74374 extends AbstractTtlGate implements DynamicElementProvider 
     }
 
     Value c = state.getPortValue(PORT_INDEX_C), override = null;
-
-    if (!c.isFullyDefined()) {
-      override = Value.ERROR;
-    }
+    Value[] vs = data.getValue().getAll();
 
     // positive edge triggered
-    if (!data.updateClock(c, StdAttr.TRIG_RISING)) {
-      return;
-    }
-
-    Value[] vs = data.getValue().getAll();
-    for (int i = 0; i < 8; i++) {
-      vs[i] = override == null ? state.getPortValue(INPUTS_D[i]) : override;
-    }
-
-    if (override == null) {
-      Value nOC = state.getPortValue(PORT_INDEX_nOC);
-
-      if (!nOC.isFullyDefined()) {
-        override = Value.ERROR;
-      } else if (nOC == Value.TRUE) {
-        override = Value.NIL;
+    if (c.isFullyDefined() && data.updateClock(c, StdAttr.TRIG_RISING)) {
+      for (int i = 0; i < 8; i++) {
+        vs[i] = state.getPortValue(INPUTS_D[i]);
       }
+    }
+
+    Value nOC = state.getPortValue(PORT_INDEX_nOC);
+
+    if (!nOC.isFullyDefined() || nOC == Value.TRUE) {
+      override = Value.NIL;
     }
 
     for (int i = 0; i < 8; i++) {

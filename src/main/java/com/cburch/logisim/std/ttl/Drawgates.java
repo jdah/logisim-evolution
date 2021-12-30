@@ -188,10 +188,16 @@ public class Drawgates {
         height - 2 * AbstractTtlGate.pinheight - 20);
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < portnames.length / 2; j++) {
+        int xx = i == 0 ? x + 10 + j * 20 : x + 160 - j * 20 - 10;
+
+        if (portnames.length == 18 && i == 1) {
+          xx += 40;
+        }
+
         GraphicsUtil.drawCenteredText(
             g,
             portnames[j + (i * 7)],
-            i == 0 ? x + 10 + j * 20 : x + 160 - j * 20 - 10,
+            xx,
             y
                 + height
                 - AbstractTtlGate.pinheight

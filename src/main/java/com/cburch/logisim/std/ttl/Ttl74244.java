@@ -101,9 +101,7 @@ public class Ttl74244 extends AbstractTtlGate {
     for (int i = 0; i < 2; i++) {
       Value nOE = state.getPortValue(i == 0 ? PORT_INDEX_1nOE : PORT_INDEX_2nOE), override = null;
 
-      if (!nOE.isFullyDefined()) {
-        override = Value.ERROR;
-      } else if (nOE == Value.TRUE) {
+      if (!nOE.isFullyDefined() || nOE == Value.TRUE) {
         override = Value.NIL;
       }
 
